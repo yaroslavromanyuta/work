@@ -133,7 +133,7 @@ public class LabelView extends TextView {
 
     @Override
     protected void onDraw(Canvas canvas) {
-        super.onDraw(canvas);
+
         List<Pair<Float, Float>> coordinates = getPathCoordinats();
 
         path.reset();
@@ -149,10 +149,14 @@ public class LabelView extends TextView {
         canvas.clipPath(path);
         bodyPaint.setColor(labelBackgroundColor);
         canvas.drawPath(path, bodyPaint);
-        textPaint.setColor(Color.BLACK);
-        textPaint.setTextSize(textSise);
-        Pair<Float, Float> textCoordinates = getTextCoords();
-        canvas.drawText(labelText, textCoordinates.first, textCoordinates.second, textPaint);
+ //       textPaint.setColor(Color.BLACK);
+   //     textPaint.setTextSize(textSise);
+ //       Pair<Float, Float> textCoordinates = getTextCoords();
+ //       canvas.drawText(labelText, textCoordinates.first, textCoordinates.second, textPaint);
+        canvas.translate((float) (getHeight()*0.5), 0);
+
+        super.onDraw(canvas);
+        canvas.restore();
     }
 
     private List<Pair<Float, Float>> getPathCoordinats(){
@@ -168,7 +172,7 @@ public class LabelView extends TextView {
         return coordinates;
     }
 
-    @Override
+ /*   @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         if (labelText.length()>0) {
             int desiredWidth = getViewWidth();
@@ -196,7 +200,7 @@ public class LabelView extends TextView {
             super.onMeasure(widthMeasureSpec, heightMeasureSpec);
         }
     }
-
+*/
     private int getViewWidth(){
         int xPad = getPaddingLeft() + getPaddingRight();
         int textWidth = (int) (labelText.length()*getTextSize());

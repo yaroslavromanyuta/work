@@ -11,7 +11,7 @@
     tools:context="appus.pro.labelview.MainActivity">
 
     <appus.pro.labelview.label.LabelView
-        android:layout_width="wrap_content"
+        android:layout_width="50dp"
         android:layout_height="wrap_content"
         android:textSize="28sp"
         android:padding="4dp"
