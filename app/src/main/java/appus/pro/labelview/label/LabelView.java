@@ -8,10 +8,13 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
+import android.graphics.Rect;
 import android.os.Build;
 import android.util.AttributeSet;
 import android.util.DisplayMetrics;
+import android.util.Log;
 import android.util.Pair;
+import android.util.TypedValue;
 import android.view.View;
 import android.widget.TextView;
 
@@ -27,15 +30,12 @@ public class LabelView extends TextView {
 
     private String labelText = "Some Text";
     private int labelBackgroundColor = Color.RED;
-    private Paint textPaint;
     private Paint bodyPaint;
     private Path path;
     private int resWidth;
     private int resHeight;
     private Paint.Align textAlign = Paint.Align.RIGHT;
     private boolean left = true;
-    private float textSise;
-    private DisplayMetrics displayMetrics;
 
     public LabelView(Context context) {
         super(context);
@@ -51,9 +51,7 @@ public class LabelView extends TextView {
                 0, 0);
         try {
             labelBackgroundColor = atr.getColor(R.styleable.LabelView_labelColor, Color.TRANSPARENT);
-            labelText = atr.getString(R.styleable.LabelView_labelText);
             left = atr.getBoolean(R.styleable.LabelView_isLeftDirection, true);
-            textSise = getTextSize();
         } finally {
             atr.recycle();
         }
@@ -68,7 +66,6 @@ public class LabelView extends TextView {
                 0, 0);
         try {
             labelBackgroundColor = atr.getColor(R.styleable.LabelView_labelColor, Color.TRANSPARENT);
-            labelText = atr.getString(R.styleable.LabelView_labelText);
             left = atr.getBoolean(R.styleable.LabelView_isLeftDirection, true);
         } finally {
             atr.recycle();
@@ -86,7 +83,6 @@ public class LabelView extends TextView {
                 0, 0);
         try {
             labelBackgroundColor = atr.getColor(R.styleable.LabelView_labelColor, Color.TRANSPARENT);
-            labelText = atr.getString(R.styleable.LabelView_labelText);
             left = atr.getBoolean(R.styleable.LabelView_isLeftDirection, true);
         } finally {
             atr.recycle();
@@ -95,16 +91,8 @@ public class LabelView extends TextView {
 
     private void init(){
 
-        displayMetrics = getContext().getResources().getDisplayMetrics();
-
-        //Draw text
-        textPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        textPaint.setColor(Color.BLACK);
-        textPaint.setStyle(Paint.Style.STROKE);
-        textPaint.setTextAlign(textAlign);
-
         //Draw background
-        bodyPaint = new Paint();
+        bodyPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         bodyPaint.setColor(labelBackgroundColor);
 
         path = new Path();
@@ -132,6 +120,47 @@ public class LabelView extends TextView {
     }
 
     @Override
+    protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+
+        labelText = String.valueOf(getText());
+
+
+
+        if (getText().length()>0) {
+
+            Rect bounds = new Rect();
+            getPaint().getTextBounds(labelText, 0, labelText.length(), bounds);
+
+            int desiredHeight = (int) (bounds.height()*getContext().getResources().getDisplayMetrics().scaledDensity + getPaddingBottom() + getPaddingTop());
+            int desiredWidth = (int) ( bounds.width()*getContext().getResources().getDisplayMetrics().scaledDensity + (desiredHeight )*0.5 + getPaddingLeft() + getPaddingRight());
+
+            int widthMode = MeasureSpec.getMode(widthMeasureSpec);
+            int widthSize = MeasureSpec.getSize(widthMeasureSpec);
+            int heightMode = MeasureSpec.getMode(heightMeasureSpec);
+            int heightSize = MeasureSpec.getSize(heightMeasureSpec);
+
+            if (widthMode == MeasureSpec.EXACTLY) {
+                resWidth = widthSize;
+            } else if (widthMode == MeasureSpec.AT_MOST) {
+                resWidth = Math.min(desiredWidth, widthSize);
+            } else {
+                resWidth = desiredWidth;
+            }
+
+            if (heightMode == MeasureSpec.EXACTLY) {
+                resHeight = desiredHeight;
+            } else if (heightMode == MeasureSpec.AT_MOST) {
+                resHeight = Math.min(desiredHeight, heightSize);
+            } else {
+                resHeight = desiredHeight;
+            }
+            setMeasuredDimension(resWidth , (int) (resHeight));
+        } else {
+            super.onMeasure(widthMeasureSpec, heightMeasureSpec);
+        }
+    }
+
+    @Override
     protected void onDraw(Canvas canvas) {
 
         List<Pair<Float, Float>> coordinates = getPathCoordinats();
@@ -141,19 +170,20 @@ public class LabelView extends TextView {
         for (int i = 0; i < coordinates.size(); i++) {
             if (i == 0){
                 path.moveTo(coordinates.get(i).first, coordinates.get(i).second);
+                Log.d("Label", "onDraw: 1st " + coordinates.get(i).first + "  " + coordinates.get(i).second);
             } else {
                 path.lineTo(coordinates.get(i).first, coordinates.get(i).second);
+                Log.d("Label", "onDraw: other " + coordinates.get(i).first + "  " + coordinates.get(i).second);
             }
         }
 
-        canvas.clipPath(path);
         bodyPaint.setColor(labelBackgroundColor);
         canvas.drawPath(path, bodyPaint);
- //       textPaint.setColor(Color.BLACK);
-   //     textPaint.setTextSize(textSise);
- //       Pair<Float, Float> textCoordinates = getTextCoords();
- //       canvas.drawText(labelText, textCoordinates.first, textCoordinates.second, textPaint);
-        canvas.translate((float) (getHeight()*0.5), 0);
+        canvas.save();
+        Pair<Float, Float> translateCoord = getTextCoords();
+        canvas.translate(translateCoord.first, translateCoord.second);
+        Log.d("Label", "onDraw: x " + canvas.getWidth() + " y " + canvas.getHeight());
+        Log.d("Label", "onDraw: x " + getMeasuredWidth() + " y " + getMeasuredHeight());
 
         super.onDraw(canvas);
         canvas.restore();
@@ -162,75 +192,37 @@ public class LabelView extends TextView {
     private List<Pair<Float, Float>> getPathCoordinats(){
         List<Pair<Float, Float>> coordinates = new ArrayList<>(6);
         if (left){
-            coordinates.add(0, new Pair<Float, Float>(0f, this.getHeight()*0.5f));
-            coordinates.add(1, new Pair<Float, Float>(this.getHeight()*0.5f, (float) this.getHeight()));
-            coordinates.add(2, new Pair<Float, Float>(this.getWidth() + this.getHeight()*0.5f, (float) this.getHeight()));
-            coordinates.add(3, new Pair<Float, Float>(this.getWidth() + this.getHeight()*0.5f, 0f));
-            coordinates.add(4, new Pair<Float, Float>(this.getHeight()*0.5f, 0f));
+            coordinates.add(0, new Pair<Float, Float>(0f, getMeasuredHeight()*0.5f));
+            coordinates.add(1, new Pair<Float, Float>(getMeasuredHeight()*0.5f, 0.5f));
+            coordinates.add(2, new Pair<Float, Float>((float) getMeasuredWidth() , 0f));
+            coordinates.add(3, new Pair<Float, Float>((float) (getMeasuredWidth() ), (float) getMeasuredHeight()));
+            coordinates.add(4, new Pair<Float, Float>(this.getMeasuredHeight()*0.5f, (float) getMeasuredHeight()));
+        } else {
+            coordinates.add(0, new Pair<Float, Float>(0f, 0f));
+            coordinates.add(1, new Pair<Float, Float>((float) this.getMeasuredWidth() - this.getMeasuredHeight()*0.5f, 0f));
+            coordinates.add(2, new Pair<Float, Float>((float) this.getMeasuredWidth(), this.getMeasuredHeight()*0.5f));
+            coordinates.add(3, new Pair<Float, Float>((float)this.getMeasuredWidth() - this.getMeasuredHeight()*0.5f,(float) this.getMeasuredHeight()));
+            coordinates.add(4, new Pair<Float, Float>(0f, (float) this.getMeasuredHeight()));
+
         }
 
         return coordinates;
     }
 
- /*   @Override
-    protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-        if (labelText.length()>0) {
-            int desiredWidth = getViewWidth();
-            int desiredHeight = getViewHeight();
-            int widthMode = MeasureSpec.getMode(widthMeasureSpec);
-            int widthSize = MeasureSpec.getSize(widthMeasureSpec);
-            int heightMode = MeasureSpec.getMode(heightMeasureSpec);
-            int heightSize = MeasureSpec.getSize(heightMeasureSpec);
-            if (widthMode == MeasureSpec.EXACTLY) {
-                resWidth = widthSize;
-            } else if (widthMode == MeasureSpec.AT_MOST) {
-                resWidth = Math.min(desiredWidth, widthSize);
-            } else {
-                resWidth = desiredWidth;
-            }
-            if (heightMode == MeasureSpec.EXACTLY) {
-                resHeight = desiredHeight;
-            } else if (heightMode == MeasureSpec.AT_MOST) {
-                resHeight = Math.min(desiredHeight, heightSize);
-            } else {
-                resHeight = desiredHeight;
-            }
-            setMeasuredDimension(resWidth, resHeight);
-        } else {
-            super.onMeasure(widthMeasureSpec, heightMeasureSpec);
-        }
-    }
-*/
-    private int getViewWidth(){
-        int xPad = getPaddingLeft() + getPaddingRight();
-        int textWidth = (int) (labelText.length()*getTextSize());
-
-        return xPad + textWidth;
+    private void resize(){
+        setMeasuredDimension((int) (getMeasuredWidth() + getMeasuredHeight()), getMeasuredHeight());
     }
 
-    private int getViewHeight(){
-        int yPad = getPaddingBottom() + getPaddingTop();
-        return (int) (yPad + getTextSize());
-    }
 
     private Pair<Float, Float> getTextCoords(){
         float x = 0, y = 0;
 
-        switch (textAlign){
-            case CENTER:
-                x = (float) ((getWidth() + getHeight()*0.5)*0.5 + getPaddingLeft());
-                y = getHeight() - getPaddingBottom();
-                break;
-
-            case LEFT:
-                x = (float) (getHeight()*0.5 + getPaddingLeft());
-                y = getHeight() - getPaddingBottom();
-                break;
-
-            case RIGHT:
-                x = (float) (getWidth() - getPaddingRight());
-                y = getHeight() - getPaddingBottom();
-                break;
+        if (left){
+            x = (float) ((getMeasuredHeight())*0.5 );
+            y = 0f;
+        } else {
+            x = 0f;
+            y = 0f;
         }
 
         return new Pair<Float, Float>(x,y);

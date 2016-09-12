@@ -11,11 +11,11 @@
     tools:context="appus.pro.labelview.MainActivity">
 
     <appus.pro.labelview.label.LabelView
-        android:layout_width="50dp"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textSize="28sp"
-        android:padding="4dp"
-        custom:labelText="SOMETEXT"
-        custom:labelColor="@color/colorAccent"/>
+        android:text="SomeText"
+        android:textSize="24dp"
+        custom:labelColor="@color/colorAccent"
+        custom:isLeftDirection="true"/>
 
 </RelativeLayout>
